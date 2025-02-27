@@ -1,8 +1,7 @@
 import subprocess
-import re
 
 def is_target_reachable(target):
-    """Check if the target IP is reachable."""
+    """Check if the target IP or domain name is reachable."""
     try:
         subprocess.check_output(['ping', '-n', '1', target], universal_newlines=True, stderr=subprocess.STDOUT)
         return True
@@ -47,12 +46,28 @@ def set_mtu(interface_name, mtu_value):
     except subprocess.CalledProcessError as e:
         print(f"Failed to set MTU: {e}")
 
-def main():
-    target_ip = '8.8.8.8'  # Google's public DNS server, may be replaced with another IP in countries with ICMP restrictions.
+def get_network_adapters():
+    """Display the list of available network adapters."""
+    try:
+        output = subprocess.check_output(['netsh', 'interface', 'ipv4', 'show', 'interfaces'], universal_newlines=True)
+        print("Available network adapters:")
+        print(output)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to retrieve network adapters: {e}")
 
-    print("Checking target reachability...")
+def main():
+    print("Welcome to the MTU Optimizer!")
+    print("This script helps you find and set the optimal MTU for your network interface.")
+    print("Please ensure you run this script as an administrator to avoid permission issues.\n")
+
+    # Get target IP or domain name from user with a default value
+    target_ip = input("Enter the target IP address or domain name (default: 8.8.8.8): ").strip()
+    if not target_ip:
+        target_ip = "8.8.8.8"  # Default value
+
+    print("\nChecking target reachability...")
     if not is_target_reachable(target_ip):
-        print("Target unreachable. Ensure your connection is working.")
+        print("Target unreachable. Ensure your connection is working and the target is correct.")
         return
 
     print("Detecting optimal MTU...")
@@ -61,13 +76,13 @@ def main():
         print("MTU detection failed. ICMP restrictions may affect results.")
         return
 
-    ## Please modify the interface_name variable to match your network adapter
-    interface_name = "Wi-Fi"
-    if not interface_name:
-        print("Failed to identify network interface. Run as administrator or check settings.")
-        return
+    # Display available network adapters
+    get_network_adapters()
 
-    print(f"Applying MTU {optimal_mtu} to {interface_name}")
+    # Get user input for the adapter name
+    interface_name = input("\nCopy and paste the name of the network adapter to apply the MTU to: ").strip()
+
+    print(f"\nApplying MTU {optimal_mtu} to {interface_name}")
     set_mtu(interface_name, optimal_mtu)
 
 if __name__ == "__main__":
